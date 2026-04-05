@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Admin Login — VerifyChain{% endblock %}
+{% block content %}
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">⬡</div>
+    <h1 class="login-title">Admin Login</h1>
+    <p class="login-sub">Sign in to register products on the blockchain</p>
+
+    {% if error %}
+    <div class="alert danger"><span class="alert-icon">✕</span> {{ error }}</div>
+    {% endif %}
+
+    <form method="post" class="form">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" required placeholder="Enter username" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required placeholder="Enter password" autocomplete="current-password" />
+      </div>
+      <button type="submit" class="btn primary full" style="margin-top:0.5rem;">
+        🔐 Sign In
+      </button>
+    </form>
+
+    <div class="login-hint">
+      <p>Demo credentials: <code>admin</code> / <code>verify123</code></p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

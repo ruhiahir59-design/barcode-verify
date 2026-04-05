@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Chain Integrity — VerifyChain{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">Chain Integrity Check</h1>
+  <p class="page-sub">Verifies every block's hash and chain linkage to detect tampering</p>
+</div>
+
+<!-- OVERALL STATUS -->
+{% if total == 0 %}
+<div class="empty-state">
+  <div class="empty-icon">⬡</div>
+  <h2>No Blocks to Verify</h2>
+  <p>Register some products first to run an integrity check.</p>
+  <a class="btn primary" href="{{ url_for('admin') }}">＋ Register Product</a>
+</div>
+{% else %}
+
+<div class="integrity-banner {% if all_ok %}integrity-ok{% else %}integrity-fail{% endif %}">
+  <div class="integrity-banner-icon">{% if all_ok %}🛡{% else %}⚠{% endif %}</div>
+  <div>
+    <div class="integrity-banner-title">
+      {% if all_ok %}Blockchain Integrity Verified{% else %}Tampering Detected!{% endif %}
+    </div>
+    <div class="integrity-banner-sub">
+      {% if all_ok %}
+        All {{ total }} block{{ 's' if total != 1 else '' }} are valid — no tampering detected
+      {% else %}
+        {{ tampered_count }} of {{ total }} block{{ 's' if total != 1 else '' }} failed verification
+      {% endif %}
+    </div>
+  </div>
+  <div class="integrity-summary-nums">
+    <div class="int-num green">{{ total - tampered_count }} <span>Valid</span></div>
+    <div class="int-num {% if tampered_count > 0 %}red{% else %}muted{% endif %}">{{ tampered_count }} <span>Invalid</span></div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="integrity-explain">
+  <h3>🔍 How Integrity Check Works</h3>
+  <div class="explain-steps">
+    <div class="explain-step">
+      <span class="explain-num">1</span>
+      <div><strong>Hash Recomputation</strong><br><span>Each block's data is re-hashed using SHA-256 and compared to the stored hash</span></div>
+    </div>
+    <div class="explain-step">
+      <span class="explain-num">2</span>
+      <div><strong>Chain Linkage</strong><br><span>Each block's <code>previous_hash</code> is checked against the actual hash of the prior block</span></div>
+    </div>
+    <div class="explain-step">
+      <span class="explain-num">3</span>
+      <div><strong>Tamper Detection</strong><br><span>Any mismatch means data was modified outside the system</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- BLOCK RESULTS -->
+<div class="block-results">
+  <h2 class="section-title">Block-by-Block Results</h2>
+  {% for r in results %}
+  <div class="int-block {% if r.valid %}int-block-ok{% else %}int-block-fail{% endif %}">
+    <div class="int-block-header">
+      <div class="int-block-left">
+        <span class="int-status-icon">{% if r.valid %}✓{% else %}✕{% endif %}</span>
+        <div>
+          <div class="int-block-title">Block #{{ r.block.block_number }} — {{ r.block.name }}</div>
+          <div class="int-block-meta">{{ r.block.product_id }} · {{ r.block.manufacturer }} · {{ r.block.timestamp }}</div>
+        </div>
+      </div>
+      <div class="int-checks">
+        <span class="int-check {% if r.hash_ok %}ok{% else %}fail{% endif %}">
+          {% if r.hash_ok %}✓{% else %}✕{% endif %} Hash
+        </span>
+        <span class="int-check {% if r.prev_ok %}ok{% else %}fail{% endif %}">
+          {% if r.prev_ok %}✓{% else %}✕{% endif %} Link
+        </span>
+      </div>
+    </div>
+
+    <div class="int-block-hashes">
+      <div class="int-hash-row">
+        <span class="int-hash-label">Stored Hash</span>
+        <span class="int-hash-val {% if r.hash_ok %}green-text{% else %}red-text{% endif %} mono small">{{ r.block.hash }}</span>
+      </div>
+      <div class="int-hash-row">
+        <span class="int-hash-label">Prev Hash</span>
+        <span class="int-hash-val mono small">{{ r.block.previous_hash[:32] }}…</span>
+      </div>
+    </div>
+
+    {% if r.issues %}
+    <div class="int-issues">
+      {% for issue in r.issues %}
+      <div class="int-issue">⚠ {{ issue }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% endif %}
+
+{% endblock %}

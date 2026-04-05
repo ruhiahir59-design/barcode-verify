@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Register Product — VerifyChain{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">Register Product</h1>
+  <p class="page-sub">Add a new product to the blockchain. A QR code will be generated automatically.</p>
+</div>
+
+<div class="two-col">
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="form-card-icon">📦</span>
+      <div>
+        <h2>Product Details</h2>
+        <p>Fill in the product information below</p>
+      </div>
+    </div>
+
+    <div class="notice info">
+      <strong>📡 For phone scanning:</strong> Run <code>ipconfig</code>, find your IPv4 address (e.g. <code>192.168.x.x</code>),
+      then set <code>PUBLIC_BASE_URL=http://YOUR_IP:5001</code> and <code>FLASK_HOST=0.0.0.0</code> before starting the app.
+    </div>
+
+    <form method="post" class="form">
+      <div class="field">
+        <label for="product_id">Product ID</label>
+        <input id="product_id" name="product_id" required placeholder="e.g. PRD-001" />
+        <span class="field-hint">Unique identifier for this product</span>
+      </div>
+      <div class="field">
+        <label for="name">Product Name</label>
+        <input id="name" name="name" required placeholder="e.g. Water Bottle" />
+      </div>
+      <div class="field">
+        <label for="manufacturer">Manufacturer</label>
+        <input id="manufacturer" name="manufacturer" required placeholder="e.g. Hindustan Unilever" />
+      </div>
+      <button type="submit" class="btn primary full">
+        <span>⬡</span> Save to Blockchain & Generate QR
+      </button>
+    </form>
+
+    {% if message %}
+    <div class="alert success">
+      <span class="alert-icon">✓</span> {{ message }}
+    </div>
+    {% endif %}
+    {% if error %}
+    <div class="alert danger">
+      <span class="alert-icon">✕</span> {{ error }}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="side-info">
+    <div class="info-card">
+      <h3>⬡ Blockchain Process</h3>
+      <ul class="process-list">
+        <li><span class="check">1</span> Product data is collected</li>
+        <li><span class="check">2</span> SHA-256 hash is computed</li>
+        <li><span class="check">3</span> Block linked to previous hash</li>
+        <li><span class="check">4</span> Saved to blockchain ledger</li>
+        <li><span class="check">5</span> QR code generated</li>
+      </ul>
+    </div>
+    <div class="info-card warning-card">
+      <h3>⚠ Important</h3>
+      <p>Each Product ID must be unique. Once registered, a product cannot be re-registered with the same ID.</p>
+    </div>
+  </div>
+</div>
+
+{% if qr_file and block_info %}
+<div class="result-banner success-banner">
+  <div class="result-qr">
+    <h3>QR Code Generated</h3>
+    <div class="qr-wrap">
+      <img src="{{ url_for('static', filename='qrcodes/' ~ qr_file) }}" alt="QR Code" class="qr-img" />
+    </div>
+    <p class="qr-hint">Scan with phone or use the <a href="{{ url_for('scan') }}">Scan page →</a></p>
+  </div>
+  <div class="result-block">
+    <h3>Block Saved to Chain</h3>
+    <div class="block-table">
+      <div class="block-row">
+        <span class="block-key">Block #</span>
+        <span class="block-val">{{ block_info.block_number }}</span>
+      </div>
+      <div class="block-row">
+        <span class="block-key">Product ID</span>
+        <span class="block-val accent-text">{{ block_info.product_id }}</span>
+      </div>
+      <div class="block-row">
+        <span class="block-key">Product Name</span>
+        <span class="block-val">{{ block_info.name }}</span>
+      </div>
+      <div class="block-row">
+        <span class="block-key">Manufacturer</span>
+        <span class="block-val">{{ block_info.manufacturer }}</span>
+      </div>
+      <div class="block-row">
+        <span class="block-key">Timestamp</span>
+        <span class="block-val">{{ block_info.timestamp }}</span>
+      </div>
+      <div class="block-row">
+        <span class="block-key">Prev Hash</span>
+        <span class="block-val mono small">{{ block_info.previous_hash[:20] }}…</span>
+      </div>
+      <div class="block-row hash-row">
+        <span class="block-key">Block Hash</span>
+        <span class="block-val mono small green-text">{{ block_info.hash }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

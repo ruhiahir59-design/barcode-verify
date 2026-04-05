@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Scan Barcode / QR — VerifyChain{% endblock %}
+{% block content %}
+
+<div class="page-header center">
+  <h1 class="page-title">Scan Barcode or QR Code</h1>
+  <p class="page-sub">Works with real product barcodes (EAN-13, UPC) and QR codes. Point camera at any product barcode.</p>
+</div>
+
+<div class="scan-layout">
+  <div class="scan-card">
+    <div class="scan-header">
+      <div class="scan-live-dot"></div>
+      <span id="scan-mode-label">Camera Ready</span>
+      <div class="scan-mode-toggle">
+        <button class="mode-btn active" id="btn-barcode" onclick="setMode('barcode')">📦 Barcode</button>
+        <button class="mode-btn" id="btn-qr" onclick="setMode('qr')">⊡ QR Code</button>
+      </div>
+    </div>
+
+    <div id="scanner-container">
+      <div id="barcode-reader"></div>
+      <div id="qr-reader" style="display:none;"></div>
+    </div>
+
+    <p id="status" class="scan-status">📷 Point camera at a product barcode or QR code…</p>
+
+    <!-- Result popup -->
+    <div id="scan-result-box" style="display:none;" class="scan-result-box">
+      <div id="scan-result-content"></div>
+      <div class="scan-result-actions">
+        <button class="btn secondary" onclick="resumeScan()">↩ Scan Again</button>
+        <a id="full-result-link" href="#" class="btn primary">View Full Details →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="scan-side">
+    <div class="info-card">
+      <h3>📱 Supported Formats</h3>
+      <ul class="format-list">
+        <li><span class="fmt-badge">EAN-13</span> Standard retail barcode</li>
+        <li><span class="fmt-badge">EAN-8</span> Small product barcode</li>
+        <li><span class="fmt-badge">UPC-A</span> US product barcode</li>
+        <li><span class="fmt-badge">UPC-E</span> Compact US barcode</li>
+        <li><span class="fmt-badge">QR</span> QR codes</li>
+      </ul>
+    </div>
+
+    <div class="manual-verify">
+      <h3>🔍 Manual Lookup</h3>
+      <p>Type any barcode or product ID manually.</p>
+      <div class="manual-form">
+        <input id="manual-id" type="text" placeholder="e.g. 8901030591016" />
+        <button class="btn primary" onclick="manualLookup()">Go</button>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3>💡 Tips</h3>
+      <ul class="scan-steps">
+        <li>Hold barcode steady and flat</li>
+        <li>Ensure good lighting</li>
+        <li>Keep 10–20cm distance</li>
+        <li>Works best in Chrome / Safari</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="lookup-loading" style="display:none;" class="lookup-loading">
+  <div class="loading-spinner"></div>
+  <p>Looking up product…</p>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+let currentMode = 'barcode';
+let barcodeScanner = null;
+let qrScanner = null;
+let scanning = true;
+
+const statusEl = document.getElementById("status");
+
+// ── Barcode scanner (QuaggaJS via html5-qrcode) ──────────────────────────
+function startBarcodeScanner() {
+  barcodeScanner = new Html5Qrcode("barcode-reader");
+  barcodeScanner.start(
+    { facingMode: "environment" },
+    {
+      fps: 15,
+      qrbox: { width: 320, height: 160 },
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+      ]
+    },
+    (decoded) => { if (scanning) onScanned(decoded); },
+    () => {}
+  ).then(() => {
+    statusEl.textContent = "📷 Ready — point at product barcode…";
+  }).catch(err => {
+    statusEl.textContent = "⚠ Camera error: " + err;
+  });
+}
+
+// ── QR scanner ────────────────────────────────────────────────────────────
+function startQRScanner() {
+  qrScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 260 }, false);
+  qrScanner.render(
+    (decoded) => { if (scanning) onScanned(decoded); },
+    () => {}
+  );
+  statusEl.textContent = "📷 Ready — point at QR code…";
+}
+
+// ── Mode toggle ───────────────────────────────────────────────────────────
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById("btn-barcode").classList.toggle("active", mode === "barcode");
+  document.getElementById("btn-qr").classList.toggle("active", mode === "qr");
+  document.getElementById("barcode-reader").style.display = mode === "barcode" ? "" : "none";
+  document.getElementById("qr-reader").style.display = mode === "qr" ? "" : "none";
+  document.getElementById("scan-result-box").style.display = "none";
+  scanning = true;
+
+  if (mode === "barcode") {
+    if (qrScanner) { try { qrScanner.clear(); } catch(e) {} qrScanner = null; }
+    if (!barcodeScanner) startBarcodeScanner();
+    statusEl.textContent = "📷 Ready — point at product barcode…";
+  } else {
+    if (barcodeScanner) { try { barcodeScanner.stop(); } catch(e) {} barcodeScanner = null; }
+    if (!qrScanner) startQRScanner();
+    statusEl.textContent = "📷 Ready — point at QR code…";
+  }
+}
+
+// ── On scan success ───────────────────────────────────────────────────────
+async function onScanned(text) {
+  scanning = false;
+  statusEl.textContent = "✅ Detected: " + text + " — looking up…";
+  showLoading(true);
+
+  // For QR codes that are URLs, extract product_id
+  let barcode = text.trim();
+  try {
+    const u = new URL(text);
+    const parts = u.pathname.split("/").filter(Boolean);
+    const i = parts.indexOf("verify");
+    if (i >= 0 && parts[i+1]) barcode = decodeURIComponent(parts[i+1]);
+  } catch(e) {}
+
+  await lookupBarcode(barcode);
+}
+
+// ── Lookup via API ────────────────────────────────────────────────────────
+async function lookupBarcode(barcode) {
+  showLoading(true);
+  try {
+    const resp = await fetch("/api/lookup/" + encodeURIComponent(barcode));
+    const data = await resp.json();
+    showLoading(false);
+    showInlineResult(data);
+  } catch(e) {
+    showLoading(false);
+    statusEl.textContent = "⚠ Lookup failed. Try manual entry.";
+    scanning = true;
+  }
+}
+
+// ── Show inline result ────────────────────────────────────────────────────
+function showInlineResult(data) {
+  const box     = document.getElementById("scan-result-box");
+  const content = document.getElementById("scan-result-content");
+  const link    = document.getElementById("full-result-link");
+
+  const bc      = data.blockchain;
+  const inet    = data.internet;
+  const barcode = data.barcode;
+
+  let html = `<div class="inline-result-barcode">Barcode: <span class="mono">${barcode}</span></div>`;
+
+  // Blockchain status
+  if (bc) {
+    html += `<div class="inline-status genuine-inline">✓ GENUINE — Found in blockchain</div>`;
+    html += `<div class="inline-info"><strong>${bc.name}</strong> by ${bc.manufacturer}</div>`;
+  } else {
+    html += `<div class="inline-status fake-inline">✕ Not in our blockchain</div>`;
+  }
+
+  // Internet info
+  if (inet && inet.found) {
+    html += `<div class="inline-internet">
+      <span class="inet-label">🌐 Online Info:</span>
+      <strong>${inet.name}</strong>${inet.brand ? ' by ' + inet.brand : ''}
+      ${inet.quantity ? ' · ' + inet.quantity : ''}
+    </div>`;
+  }
+
+  content.innerHTML = html;
+  link.href = "/verify/" + encodeURIComponent(barcode);
+  box.style.display = "block";
+  statusEl.textContent = "✅ Scan complete";
+}
+
+function resumeScan() {
+  document.getElementById("scan-result-box").style.display = "none";
+  scanning = true;
+  statusEl.textContent = "📷 Ready — scan another product…";
+}
+
+function showLoading(show) {
+  document.getElementById("lookup-loading").style.display = show ? "flex" : "none";
+}
+
+function manualLookup() {
+  const val = document.getElementById("manual-id").value.trim();
+  if (val) {
+    showLoading(true);
+    lookupBarcode(val);
+  }
+}
+document.getElementById("manual-id").addEventListener("keydown", e => {
+  if (e.key === "Enter") manualLookup();
+});
+
+// Start barcode mode by default
+startBarcodeScanner();
+</script>
+{% endblock %}

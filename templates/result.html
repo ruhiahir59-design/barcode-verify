@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Verification Result — VerifyChain{% endblock %}
+{% block content %}
+
+<div class="result-page">
+
+  <!-- BLOCKCHAIN VERDICT -->
+  {% if genuine %}
+  <div class="verdict genuine">
+    <div class="verdict-glow genuine-glow"></div>
+    <div class="verdict-icon">✓</div>
+    <div class="verdict-label">GENUINE PRODUCT</div>
+    <div class="verdict-sub">Registered on our blockchain — verified authentic</div>
+  </div>
+  {% else %}
+  <div class="verdict fake">
+    <div class="verdict-glow fake-glow"></div>
+    <div class="verdict-icon">✕</div>
+    <div class="verdict-label">NOT IN BLOCKCHAIN</div>
+    <div class="verdict-sub">Product ID <strong>{{ product_id }}</strong> is not registered by any verified manufacturer</div>
+  </div>
+  {% endif %}
+
+  <!-- INTERNET PRODUCT INFO (Open Food Facts) -->
+  {% if internet and internet.found %}
+  <div class="internet-card">
+    <div class="internet-card-header">
+      <span class="inet-badge">🌐 Online Product Data</span>
+      <span class="inet-source">via Open Food Facts</span>
+    </div>
+    <div class="inet-body">
+      {% if internet.image %}
+      <img src="{{ internet.image }}" alt="Product" class="inet-product-img" />
+      {% endif %}
+      <div class="inet-details">
+        <h2 class="inet-product-name">{{ internet.name }}</h2>
+        <div class="inet-grid">
+          {% if internet.brand %}
+          <div class="inet-item">
+            <span class="inet-key">Brand</span>
+            <span class="inet-val">{{ internet.brand }}</span>
+          </div>
+          {% endif %}
+          {% if internet.category %}
+          <div class="inet-item">
+            <span class="inet-key">Category</span>
+            <span class="inet-val">{{ internet.category }}</span>
+          </div>
+          {% endif %}
+          {% if internet.quantity %}
+          <div class="inet-item">
+            <span class="inet-key">Quantity</span>
+            <span class="inet-val">{{ internet.quantity }}</span>
+          </div>
+          {% endif %}
+          {% if internet.country %}
+          <div class="inet-item">
+            <span class="inet-key">Country</span>
+            <span class="inet-val">{{ internet.country }}</span>
+          </div>
+          {% endif %}
+          <div class="inet-item">
+            <span class="inet-key">Barcode</span>
+            <span class="inet-val mono">{{ internet.barcode }}</span>
+          </div>
+          {% if internet.nutriscore %}
+          <div class="inet-item">
+            <span class="inet-key">Nutri-Score</span>
+            <span class="nutriscore grade-{{ internet.nutriscore | lower }}">{{ internet.nutriscore }}</span>
+          </div>
+          {% endif %}
+        </div>
+        {% if internet.ingredients %}
+        <div class="inet-ingredients">
+          <span class="inet-key">Ingredients</span>
+          <p>{{ internet.ingredients }}{% if internet.ingredients|length >= 200 %}…{% endif %}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% elif internet and not internet.found %}
+  <div class="inet-not-found">
+    <span>🌐</span> Product not found in Open Food Facts database — may be a non-food item or unregistered product.
+  </div>
+  {% endif %}
+
+  <!-- BLOCKCHAIN DETAILS -->
+  {% if genuine and block %}
+  <div class="product-detail-card">
+    <h2>⬡ Blockchain Record</h2>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <span class="detail-key">Product ID</span>
+        <span class="detail-val accent-text mono">{{ product_id }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-key">Product Name</span>
+        <span class="detail-val">{{ block.name }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-key">Manufacturer</span>
+        <span class="detail-val">{{ block.manufacturer }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-key">Block #</span>
+        <span class="detail-val">#{{ block.block_number }}</span>
+      </div>
+      <div class="detail-item full-width">
+        <span class="detail-key">Registered</span>
+        <span class="detail-val">{{ block.timestamp }}</span>
+      </div>
+      <div class="detail-item full-width">
+        <span class="detail-key">Block Hash</span>
+        <span class="detail-val mono small green-text">{{ block.hash }}</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not genuine %}
+  <div class="fake-warning-card">
+    <h3>⚠ What this means</h3>
+    <ul>
+      <li>This product is <strong>not registered</strong> by any verified manufacturer on our chain</li>
+      <li>It may be a <strong>counterfeit</strong> or unauthorized product</li>
+      <li>Do <strong>not</strong> use if it claims to be a known brand</li>
+      <li>Report to the <strong>manufacturer or authorities</strong></li>
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="result-actions">
+    <a class="btn secondary" href="{{ url_for('scan') }}">⊡ Scan Another</a>
+    <a class="btn primary" href="{{ url_for('home') }}">⬡ Home</a>
+  </div>
+</div>
+{% endblock %}
